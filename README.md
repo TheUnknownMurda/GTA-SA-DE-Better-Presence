@@ -33,6 +33,8 @@ Jeu (UE4) ──UE4SS──> mod Lua BetterPresence ──> %LOCALAPPDATA%\GTASA
 | Mission | titre HUD `UI_HUDItem_TitleText_Mission_C` ; effacée sur *MissionFailed*, « Mission passed », Wasted, Busted |
 | Argent, heure, radio | `MoneyText`, `TimeText`, titre `UI_HUDItem_TitleText_Radio_SA_C` (dans le JSON, non affichés par défaut) |
 
+Le filtre des titres de mission (`isMissionName` dans `main.lua`) écarte les messages système qui transitent par le même widget (achat de propriété, checkpoint…). Piste écartée pour lancer le client : `KismetSystemLibrary.LaunchURL`, qui envoie l'URL au navigateur par défaut au lieu d'exécuter le fichier.
+
 Les titres HUD sont lus comme enfants de `MainCanvas` des deux HUD drawers (`Gameterface.CurrentHudDrawer` / `CurrentPriorityHudDrawer`) : coût ~0 ms par tick.
 
 ## Installation
@@ -65,9 +67,12 @@ python -m venv .venv
 start.bat            rem console, logs visibles
 ```
 
-- `start_hidden.vbs` : lance en arrière-plan sans fenêtre (crée un raccourci dans `shell:startup` pour le démarrer avec Windows). Le client attend le jeu et ne consomme rien tant qu'il n'est pas lancé.
-- `stop.bat` : arrête le client lancé en arrière-plan.
+**Cycle de vie automatique** : le mod lance le client au démarrage du jeu (`start_hidden.vbs` via `os.execute`, une console apparaît ~100 ms) et le client se ferme tout seul quand le jeu se ferme (`exit_with_game` dans `config.json`). Une seule instance tourne à la fois (mutex Windows). Rien ne tourne quand le jeu ne tourne pas. Le chemin du lanceur est écrit par `tools\install_mod.ps1` dans `Mods\BetterPresence\client_path.txt` : relance ce script si tu déplaces le projet.
+
+- `start_hidden.vbs` : lancement manuel en arrière-plan, sans fenêtre (utile pour tester sans le mod).
+- `stop.bat` : arrête un client lancé en arrière-plan.
 - `python presence.py --once` : affiche l'état lu et la présence calculée (débogage).
+- `python presence.py --stay` : ne pas quitter quand le jeu se ferme.
 - Logs : `client/presence.log`.
 
 ## Personnalisation

@@ -1,7 +1,6 @@
 ' Lance le client en arriere-plan, sans fenetre de console.
-' Pour l'arreter : Gestionnaire des taches > pythonw.exe, ou stop.bat.
-' Pour le demarrer avec Windows : cree un raccourci vers ce fichier dans
-'   %APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup
+' Le mod UE4SS l'appelle automatiquement au demarrage du jeu (client_path.txt) ;
+' le client se ferme tout seul quand le jeu se ferme. Pour l'arreter : stop.bat.
 Set fso = CreateObject("Scripting.FileSystemObject")
 Set shell = CreateObject("WScript.Shell")
 dir = fso.GetParentFolderName(WScript.ScriptFullName)

@@ -29,9 +29,19 @@
 ]]
 
 local MOD_TAG   = "[BetterPresence]"
-local VERSION   = "0.5.3"
+local VERSION   = "0.6.1"
 local SCHEMA    = 1
 local POLL_MS   = 1000
+
+-- Dossier du mod (…\Mods\BetterPresence), déduit du chemin de ce script.
+local MOD_DIR = (function()
+    local src = debug.getinfo(1, "S").source or ""
+    src = src:gsub("^@", "")
+    local scriptsDir = src:match("^(.*)[\\/][^\\/]+$") or "."
+    return scriptsDir:match("^(.*)[\\/][^\\/]+$") or scriptsDir
+end)()
+-- Chemin du lanceur du client Discord (écrit par tools\install_mod.ps1).
+local CLIENT_PATH_FILE = MOD_DIR .. "\\client_path.txt"
 
 -- ---------------------------------------------------------------------------
 -- Utilitaires
@@ -235,6 +245,7 @@ local flags = {
     titles      = true,   -- titres HUD (zone, véhicule, mission) via les drawers
     titles_scan = false,  -- forcer le repli FindAllOf (coûteux, ~80 ms/tick)
     menu        = true,   -- Gameterface.CurrentMenu (pause)
+    launch_client = true, -- lance le client Discord au démarrage (KismetSystemLibrary.LaunchURL)
     camera      = false,  -- distance caméra-joueur + vitesse (diagnostic)
     misc        = false,  -- GetTimeOfDay, GetRadioStationOffset (diagnostic)
     area        = false,  -- GetMapAreaName(table UE) — PLANTE LE JEU, tests uniquement
@@ -936,6 +947,34 @@ local function runDumpIfRequested()
 end
 
 -- ---------------------------------------------------------------------------
+-- Lancement du client Discord
+-- ---------------------------------------------------------------------------
+-- os.execute("wscript start_hidden.vbs") : seul moyen de lancer un processus
+-- depuis le Lua d'UE4SS. Une console cmd apparaît ~100 ms (le jeu n'a pas de
+-- console) ; on ne le fait qu'une fois, au démarrage. Écarté : LaunchURL
+-- d'Unreal, qui envoie l'URL au navigateur par défaut au lieu d'exécuter le fichier.
+-- Le client est à instance unique et se ferme tout seul quand le jeu se ferme.
+local clientLaunched = false
+
+local function launchClientOnce()
+    if clientLaunched or not flags.launch_client then return end
+    clientLaunched = true
+    local path = readFile(CLIENT_PATH_FILE)
+    path = path and trim(path:match("[^\r\n]+") or "") or ""
+    if path == "" then
+        log("Pas de client à lancer (%s absent) : lance client\\start_hidden.vbs toi-même ou relance tools\\install_mod.ps1.", CLIENT_PATH_FILE)
+        return
+    end
+    if not fileExists(path) then
+        log("Client introuvable : %s", path)
+        return
+    end
+    local cmd = 'wscript.exe "' .. path .. '"'
+    local ok, how, code = os.execute(cmd)
+    log("Client Discord lancé (%s) → %s %s %s", cmd, tostring(ok), tostring(how), tostring(code))
+end
+
+-- ---------------------------------------------------------------------------
 -- Boucle
 -- ---------------------------------------------------------------------------
 local tick = 0
@@ -944,6 +983,7 @@ local function onTick()
     tick = tick + 1
     local ok, err = pcall(function()
         if tick % 2 == 0 then loadFlags() end
+        if tick == 2 then launchClientOnce() end
         local st = collectState()
         writeState(st)
         if stageLogBudget > 0 then stageLogBudget = stageLogBudget - 1 end

@@ -10,14 +10,21 @@ du mod UE4SS `BetterPresence`, qui écrit périodiquement un fichier JSON :
 Si le fichier est absent ou trop vieux (mod pas chargé, écran de chargement…),
 on retombe sur une présence basique "En jeu" avec le temps écoulé.
 
+Cycle de vie : le mod UE4SS lance ce client au démarrage du jeu (start_hidden.vbs
+via KismetSystemLibrary.LaunchURL). Une seule instance tourne à la fois (mutex
+Windows) et, par défaut, le client se termine quand le jeu se ferme
+(`exit_with_game` dans config.json).
+
 Usage :
     python presence.py            # console, logs visibles
     python presence.py --once     # affiche l'état calculé puis quitte (debug)
+    python presence.py --stay     # ne pas quitter quand le jeu se ferme
 """
 
 from __future__ import annotations
 
 import argparse
+import ctypes
 import json
 import logging
 import os
@@ -52,6 +59,7 @@ class Config:
     poll_interval: float
     state_max_age: float
     min_update_interval: float
+    exit_with_game: bool = True
     images: dict[str, str] = field(default_factory=dict)
     texts: dict[str, str] = field(default_factory=dict)
 
@@ -66,6 +74,7 @@ class Config:
             poll_interval=float(raw.get("poll_interval", 1.0)),
             state_max_age=float(raw.get("state_max_age", 10)),
             min_update_interval=float(raw.get("min_update_interval", 4)),
+            exit_with_game=bool(raw.get("exit_with_game", True)),
             images=raw.get("images", {}),
             texts=raw.get("texts", {}),
         )
@@ -274,6 +283,30 @@ def truncate_fields(act: dict[str, Any]) -> dict[str, Any]:
 
 
 # --------------------------------------------------------------------------- #
+# Instance unique (mutex Windows nommé)
+# --------------------------------------------------------------------------- #
+MUTEX_NAME = r"Local\GTASADEBetterPresence_Client"
+ERROR_ALREADY_EXISTS = 183
+_mutex_handle = None  # gardé vivant pour la durée du processus
+
+
+def acquire_single_instance() -> bool:
+    """True si nous sommes la seule instance ; False si une autre tourne déjà."""
+    global _mutex_handle
+    if os.name != "nt":
+        return True
+    kernel32 = ctypes.windll.kernel32  # type: ignore[attr-defined]
+    handle = kernel32.CreateMutexW(None, False, MUTEX_NAME)
+    if not handle:
+        return True  # impossible de créer le mutex : on ne bloque pas le démarrage
+    if kernel32.GetLastError() == ERROR_ALREADY_EXISTS:
+        kernel32.CloseHandle(handle)
+        return False
+    _mutex_handle = handle
+    return True
+
+
+# --------------------------------------------------------------------------- #
 # Détection du jeu
 # --------------------------------------------------------------------------- #
 def find_game(process_name: str) -> Optional[psutil.Process]:
@@ -377,6 +410,10 @@ class PresenceClient:
                     if game_seen:
                         log.info("Jeu fermé.")
                         game_seen = False
+                        self.drop_connection()
+                        if self.cfg.exit_with_game:
+                            log.info("Arrêt du client (exit_with_game).")
+                            return
                     self.drop_connection()
                     time.sleep(max(self.cfg.poll_interval, 2.0))
                     continue
@@ -425,6 +462,7 @@ def setup_logging(verbose: bool) -> None:
 def main() -> int:
     parser = argparse.ArgumentParser(description="Discord Rich Presence pour GTA SA DE")
     parser.add_argument("--once", action="store_true", help="Affiche le payload calculé puis quitte")
+    parser.add_argument("--stay", action="store_true", help="Continue de tourner après la fermeture du jeu")
     parser.add_argument("-v", "--verbose", action="store_true")
     args = parser.parse_args()
     setup_logging(args.verbose)
@@ -434,6 +472,8 @@ def main() -> int:
     except (OSError, json.JSONDecodeError) as exc:
         log.error("Impossible de lire %s : %s", CONFIG_PATH, exc)
         return 1
+    if args.stay:
+        cfg.exit_with_game = False
 
     # Le dossier du fichier d'état doit exister pour que le mod Lua puisse y écrire.
     try:
@@ -454,6 +494,10 @@ def main() -> int:
         log.error("discord_client_id manquant ou invalide dans config.json "
                   "(crée une application sur https://discord.com/developers/applications).")
         return 1
+
+    if not acquire_single_instance():
+        log.info("Une autre instance du client tourne déjà, on s'arrête.")
+        return 0
 
     client = PresenceClient(cfg)
     try:

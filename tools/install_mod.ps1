@@ -26,5 +26,14 @@ if (-not (Test-Path $src)) {
 New-Item -ItemType Directory -Force -Path $dst | Out-Null
 Copy-Item -Path (Join-Path $src "*") -Destination $dst -Recurse -Force
 
+# Chemin du lanceur du client Discord : le mod le lit au démarrage du jeu et
+# lance le client (KismetSystemLibrary.LaunchURL -> wscript, sans console).
+$launcher = Join-Path $root "client\start_hidden.vbs"
+if (Test-Path $launcher) {
+    [IO.File]::WriteAllText((Join-Path $dst "client_path.txt"), $launcher, [Text.UTF8Encoding]::new($false))
+} else {
+    Write-Warning "client\start_hidden.vbs introuvable : le client ne sera pas lancé automatiquement."
+}
+
 Write-Host "Mod installé dans $dst"
 Get-ChildItem -Recurse -File $dst | ForEach-Object { "  " + $_.FullName.Substring($dst.Length + 1) + "  (" + $_.Length + " o)" }
