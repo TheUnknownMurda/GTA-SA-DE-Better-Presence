@@ -53,7 +53,7 @@ Vérification : lance le jeu, `Win64\UE4SS.log` doit contenir `[BetterPresence] 
 1. [discord.com/developers/applications](https://discord.com/developers/applications) → *New Application*. Le **nom** de l'application est ce que Discord affiche (« Joue à … »).
 2. Copie l'*Application ID* dans `client/config.json` → `discord_client_id`.
 3. Optionnel — *Rich Presence → Art Assets*, uploade des images nommées :
-   `logo` (grande image), `onfoot`, `vehicle`, `menu`, `wanted_1` … `wanted_6` (petites images). Les clés sont modifiables dans `config.json` (`images`), une URL `https://` directe fonctionne aussi.
+   `logo` (grande image), `onfoot`, `vehicle`, `menu`, `wanted_1` … `wanted_6` (petites images). Des icônes prêtes à l'emploi sont fournies dans [`assets/`](assets/) (512×512, régénérables avec `tools/make_assets.py`) ; il te reste à fournir `logo` (jaquette du jeu). Les clés sont modifiables dans `config.json` (`images`), une URL `https://` directe fonctionne aussi.
 4. Si Discord affiche la présence Rockstar de base à la place, désactive l'intégration Discord dans le Rockstar Games Launcher (ou dans Discord : *Paramètres → Activités enregistrées*).
 
 ### 3. Client Python
