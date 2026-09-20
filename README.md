@@ -95,3 +95,7 @@ start.bat            rem console, logs visibles
 - Le quartier n'est connu qu'après le premier affichage de son nom (chargement de partie ou changement de zone).
 - La mission en cours est déduite des titres HUD (début / échec / réussite / mort / arrestation) : une mission abandonnée sans message peut rester affichée jusqu'au prochain événement.
 - Le nom du véhicule vient du titre affiché à l'entrée ; s'il n'est pas apparu (mod chargé en cours de route), on affiche « En véhicule ».
+
+## Licence
+
+[MIT](LICENSE).
