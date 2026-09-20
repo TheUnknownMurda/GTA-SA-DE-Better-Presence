@@ -1,0 +1,41 @@
+{
+  "_comment": "Client ID de ton application Discord (https://discord.com/developers/applications). Obligatoire.",
+  "discord_client_id": "1551188391738089514",
+  "_comment_process": "Nom du processus du jeu tel que vu par Windows.",
+  "game_process_name": "SanAndreas.exe",
+  "_comment_state": "Chemin du fichier d'état écrit par le mod UE4SS. Laisse vide pour %LOCALAPPDATA%\\GTASADEBetterPresence\\state.json",
+  "state_file": "",
+  "_comment_timing": "Intervalle de lecture (s), âge max du fichier d'état avant de retomber en présence basique (s), délai mini entre deux envois à Discord (s).",
+  "poll_interval": 1.0,
+  "state_max_age": 10,
+  "min_update_interval": 4,
+  "_comment_images": "Clés d'images (onglet Rich Presence > Art Assets de ton appli Discord) OU URLs https directes. Laisse vide pour ne rien afficher.",
+  "images": {
+    "large": "logo",
+    "large_text": "GTA San Andreas – The Definitive Edition",
+    "on_foot": "onfoot",
+    "vehicle": "vehicle",
+    "menu": "menu",
+    "wanted_prefix": "wanted_"
+  },
+  "_comment_texts": "Textes affichés dans Discord. {zone} {city} {vehicle} {mission} {level} sont remplacés. Modifiables librement (ici en anglais).",
+  "texts": {
+    "menu_details": "In the menus",
+    "menu_state": "Main menu",
+    "basic_details": "In game",
+    "basic_state": "San Andreas",
+    "location": "{zone}, {city}",
+    "location_no_city": "{zone}",
+    "location_unknown": "Somewhere in San Andreas",
+    "on_foot": "On foot",
+    "in_vehicle": "In a {vehicle}",
+    "in_vehicle_unknown": "In a vehicle",
+    "free_roam": "Free roam",
+    "mission": "Mission: {mission}",
+    "wanted_small_text": "Wanted level: {level} star(s)",
+    "paused": "Paused",
+    "wasted": "Wasted",
+    "busted": "Busted",
+    "separator": " · "
+  }
+}
