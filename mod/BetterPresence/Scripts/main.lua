@@ -29,7 +29,7 @@
 ]]
 
 local MOD_TAG   = "[BetterPresence]"
-local VERSION   = "0.6.1"
+local VERSION   = "0.6.2"
 local SCHEMA    = 1
 local POLL_MS   = 1000
 
@@ -966,7 +966,7 @@ local function launchClientOnce()
         return
     end
     if not fileExists(path) then
-        log("Client introuvable : %s", path)
+        log("Client introuvable : %s (projet déplacé ? relance tools/install_mod.ps1 pour mettre à jour client_path.txt)", path)
         return
     end
     local cmd = 'wscript.exe "' .. path .. '"'

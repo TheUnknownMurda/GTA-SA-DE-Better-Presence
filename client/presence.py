@@ -60,6 +60,7 @@ class Config:
     state_max_age: float
     min_update_interval: float
     exit_with_game: bool = True
+    activity_name: str = ""   # nom affiché ("Playing …") ; vide = nom de l'application Discord
     images: dict[str, str] = field(default_factory=dict)
     texts: dict[str, str] = field(default_factory=dict)
 
@@ -75,6 +76,7 @@ class Config:
             state_max_age=float(raw.get("state_max_age", 10)),
             min_update_interval=float(raw.get("min_update_interval", 4)),
             exit_with_game=bool(raw.get("exit_with_game", True)),
+            activity_name=str(raw.get("activity_name") or "").strip(),
             images=raw.get("images", {}),
             texts=raw.get("texts", {}),
         )
@@ -193,6 +195,10 @@ def build_activity(cfg: Config, state: Optional[GameState], start_ts: int) -> di
     sep = t.get("separator", " · ")
 
     act: dict[str, Any] = {"start": start_ts}
+    # Nom d'activité personnalisé : Discord l'accepte dans SET_ACTIVITY (champ "name"),
+    # ce qui contourne les limites du nom d'application (32 caractères, pas de ":").
+    if cfg.activity_name:
+        act["name"] = cfg.activity_name[:128]
     if img.get("large"):
         act["large_image"] = img["large"]
         act["large_text"] = img.get("large_text") or None

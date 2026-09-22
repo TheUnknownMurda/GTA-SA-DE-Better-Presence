@@ -1,6 +1,8 @@
 {
   "_comment": "Client ID de ton application Discord (https://discord.com/developers/applications). Obligatoire.",
   "discord_client_id": "1551188391738089514",
+  "_comment_name": "Nom affiché dans « Playing … » (peut différer du nom de l'application Discord, qui interdit « : » et est limité à 32 caractères). Vide = nom de l'application.",
+  "activity_name": "Grand Theft Auto: San Andreas – The Definitive Edition",
   "_comment_process": "Nom du processus du jeu tel que vu par Windows.",
   "game_process_name": "SanAndreas.exe",
   "_comment_state": "Chemin du fichier d'état écrit par le mod UE4SS. Laisse vide pour %LOCALAPPDATA%\\GTASADEBetterPresence\\state.json",

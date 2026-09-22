@@ -56,6 +56,7 @@ Check: start the game, `Win64\UE4SS.log` must contain `[BetterPresence] v… cha
 
 1. [discord.com/developers/applications](https://discord.com/developers/applications) → *New Application*. The application **name** is what Discord shows ("Playing …").
 2. Copy the *Application ID* into `client/config.json` → `discord_client_id`.
+   The displayed title ("Playing …") comes from `activity_name` in `config.json`, independent of the application name (Discord forbids `:` and caps it at 32 characters): default `Grand Theft Auto: San Andreas – The Definitive Edition`, leave empty to use the application name.
 3. Optional — *Rich Presence → Art Assets*, upload images named:
    `logo` (large image), `onfoot`, `vehicle`, `menu`, `wanted_1` … `wanted_6` (small images). Ready-made icons are provided in [`assets/`](assets/) (512×512, regenerate with `tools/make_assets.py`); you only have to supply `logo` (game cover). Keys are configurable in `config.json` (`images`); a direct `https://` URL also works.
 4. If Discord shows Rockstar's basic presence instead, disable the Discord integration in the Rockstar Games Launcher (or in Discord: *Settings → Registered Games*).
@@ -79,7 +80,7 @@ start.bat            rem console mode, logs visible
 
 ## Customisation
 
-`client/config.json` — displayed texts (`texts`, English by default, freely translatable), image keys, polling interval, maximum age of `state.json` before falling back to the basic presence, `exit_with_game`.
+`client/config.json` — `activity_name` (title shown in Discord), displayed texts (`texts`, English by default, freely translatable), image keys, polling interval, maximum age of `state.json` before falling back to the basic presence, `exit_with_game`.
 
 `%LOCALAPPDATA%\GTASADEBetterPresence\flags.txt` (optional, hot-reloaded by the mod) — enables/disables each data source, one `key=0|1` per line: `position`, `gamepad`, `playerinfo`, `titles`, `menu`, `launch_client`, `debug` (raw details in the JSON), `camera`, `misc`, `timing`, `stars_tree`, `titles_scan`.
 
