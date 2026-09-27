@@ -45,7 +45,15 @@ Extract this project anywhere you like, for example `C:\BetterPresence`. Keep th
 folder where it is afterwards — the game is told where to find it during step 6.
 
 **First, find your game folder.** You need the folder that contains
-`SanAndreas.exe`. It is called `Win64` and sits here, depending on the store:
+`SanAndreas.exe`. It is called `Win64`.
+
+> **Let the project find it for you:** right-click **`tools\find_game.ps1`** →
+> *Run with PowerShell*. It looks in the running game, your Steam libraries, Epic
+> and the usual install folders, prints the path, copies it to the clipboard and
+> remembers it — the other scripts then use it without being told. If the quick
+> search comes up empty it offers a full scan of your drives.
+
+Otherwise, it sits here depending on the store:
 
 | Store | Typical path |
 |---|---|
@@ -301,8 +309,10 @@ that go through the same widget (property purchase, checkpoint saved…).
 - Exploration dump: create an empty `dump.request` file next to `state.json` →
   `dump_objects.txt` / `dump_widgets.txt`. The full UE4SS dump (Ctrl+J in game →
   `UE4SS_ObjectDump.txt`) lists every reflected class and function.
-- `tools\common.ps1` holds the shared helpers of the optional scripts (game
-  detection, text files).
+- `tools\common.ps1` holds the shared helpers of the optional scripts: game
+  detection (running process → Steam libraries → Epic manifests → usual folders
+  on every fixed drive, then `tools\game_path.txt` as a cache) and text files.
+  Every script accepts `-GameWin64 "…\Gameface\Binaries\Win64"` to override it.
 
 ### Known pitfalls (UE4SS 3.0.1 + SA DE)
 
