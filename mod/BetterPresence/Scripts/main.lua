@@ -270,7 +270,7 @@ local function loadFlags()
             end
         end
     end
-    if #changed > 0 then log("flags modifiés : %s", table.concat(changed, " ")) end
+    if #changed > 0 then log("flags changed: %s", table.concat(changed, " ")) end
 end
 
 -- ---------------------------------------------------------------------------
@@ -284,7 +284,7 @@ local function getGameterface()
         or findLiveInstance("SanAndreasInterface")
         or findLiveInstance("Gameterface")
     if cache.gameterface then
-        log("Gameterface trouvé : %s", safeFullName(cache.gameterface))
+        log("Gameterface found: %s", safeFullName(cache.gameterface))
     end
     return cache.gameterface
 end
@@ -293,7 +293,7 @@ local function getPlayerInfoWidget()
     if isValid(cache.playerInfo) then return cache.playerInfo end
     cache.playerInfo = findLiveInstance("UI_HUDItem_PlayerInfo_SA_C")
     if cache.playerInfo then
-        log("Widget PlayerInfo trouvé : %s", safeFullName(cache.playerInfo))
+        log("PlayerInfo widget found: %s", safeFullName(cache.playerInfo))
     end
     return cache.playerInfo
 end
@@ -302,7 +302,7 @@ local function getPlayerController()
     if isValid(cache.playerController) then return cache.playerController end
     cache.playerController = findLiveInstance("GTAPlayerController") or findLiveInstance("PlayerController")
     if cache.playerController then
-        log("PlayerController trouvé : %s", safeFullName(cache.playerController))
+        log("PlayerController found: %s", safeFullName(cache.playerController))
     end
     return cache.playerController
 end
@@ -325,7 +325,7 @@ local function getDrawers(gi)
             if d then list[#list + 1] = d end
         end
     end
-    for _, d in ipairs(list) do log("HUD drawer : %s", safeFullName(d)) end
+    for _, d in ipairs(list) do log("HUD drawer: %s", safeFullName(d)) end
     cache.drawers = list
     return list
 end
@@ -410,12 +410,12 @@ local function onTitle(kind, text)
     if h.text ~= text then
         h.text = text
         h.changed_at = now
-        log("HUD %s : %s", kind, text)
+        log("HUD %s: %s", kind, text)
         if kind == "mission" then
             if isMissionName(text) then
                 currentMission = text
             else
-                log("Titre ignoré (pas un nom de mission) : %s", text)
+                log("Title ignored (not a mission name): %s", text)
             end
         elseif kind == "failed" then
             currentMission = nil
@@ -497,7 +497,7 @@ local function collectPanelChildren(panel, items, diag, depth)
                 -- Item HUD que l'on ne classe pas encore : journalisé une fois (diagnostic).
                 seenHudClasses[cls] = true
                 local vis = try(function() return w:GetVisibility() end)
-                log("Item HUD non classé : %s (vis=%s) texte=%s", cls, tostring(vis), tostring(readAnyText(w, 0)))
+                log("Unclassified HUD item: %s (vis=%s) text=%s", cls, tostring(vis), tostring(readAnyText(w, 0)))
             end
         end
     end
@@ -568,11 +568,11 @@ local function pollTitles(gi, dbg)
     -- L'écran de fin de mission (UI_HUDItem_Mission_SA_C) vaut fin de mission,
     -- même si son texte n'est pas lisible.
     if missionBoxShown and currentMission then
-        log("Écran de mission affiché → fin de mission (%s)", currentMission)
+        log("Mission screen shown -> mission over (%s)", currentMission)
         currentMission = nil
     end
     if deathVisible then
-        if currentMission then log("%s visible → fin de mission", deathVisible) end
+        if currentMission then log("%s visible -> mission over", deathVisible) end
         currentMission = nil
         if dbg then dbg.death_screen = deathVisible end
     end
@@ -677,7 +677,7 @@ end
 
 local stageLogBudget = 3 -- on trace les étapes des 3 premiers ticks (diagnostic de crash)
 local function stage(name)
-    if stageLogBudget > 0 then log("étape : %s", name) end
+    if stageLogBudget > 0 then log("stage: %s", name) end
 end
 
 local lastPos = nil
@@ -855,7 +855,7 @@ end
 local function writeState(st)
     local ok, err = writeFileAtomic(STATE_PATH, STATE_TMP, jsonValue(st))
     if not ok then
-        log("Écriture de %s impossible : %s", STATE_PATH, tostring(err))
+        log("Could not write %s: %s", STATE_PATH, tostring(err))
     end
     return ok
 end
@@ -878,7 +878,7 @@ end
 
 local function dumpObjects()
     local f, err = io.open(DUMP_OBJECTS, "wb")
-    if not f then log("dump_objects impossible : %s", tostring(err)) return end
+    if not f then log("dump_objects failed: %s", tostring(err)) return end
 
     local classCount = {}
     local interesting = {}
@@ -904,12 +904,12 @@ local function dumpObjects()
     table.sort(interesting)
     for _, name in ipairs(interesting) do f:write(name, "\n") end
     f:close()
-    log("dump_objects.txt écrit (%d objets, %d intéressants)", total, #interesting)
+    log("dump_objects.txt written (%d objects, %d interesting)", total, #interesting)
 end
 
 local function dumpWidgets()
     local f, err = io.open(DUMP_WIDGETS, "wb")
-    if not f then log("dump_widgets impossible : %s", tostring(err)) return end
+    if not f then log("dump_widgets failed: %s", tostring(err)) return end
 
     f:write("=== UserWidget instances ===\n")
     local widgets = try(function() return FindAllOf("UserWidget") end) or {}
@@ -933,17 +933,17 @@ local function dumpWidgets()
         end
     end
     f:close()
-    log("dump_widgets.txt écrit (%d UserWidget)", #widgets)
+    log("dump_widgets.txt written (%d UserWidget)", #widgets)
 end
 
 local function runDumpIfRequested()
     if not fileExists(DUMP_REQUEST) then return end
     os.remove(DUMP_REQUEST)
-    log("Dump demandé…")
+    log("Dump requested...")
     local ok, err = pcall(dumpObjects)
-    if not ok then log("dumpObjects a échoué : %s", tostring(err)) end
+    if not ok then log("dumpObjects failed: %s", tostring(err)) end
     ok, err = pcall(dumpWidgets)
-    if not ok then log("dumpWidgets a échoué : %s", tostring(err)) end
+    if not ok then log("dumpWidgets failed: %s", tostring(err)) end
 end
 
 -- ---------------------------------------------------------------------------
@@ -963,7 +963,7 @@ local function launchClientOnce()
     clientLaunched = true
     local content = readFile(CLIENT_PATH_FILE)
     if not content then
-        log("Pas de client à lancer (%s absent) : relance tools\\install_mod.ps1.", CLIENT_PATH_FILE)
+        log("No client to launch (%s missing): run tools\\install_mod.ps1 again.", CLIENT_PATH_FILE)
         return
     end
     local lines = {}
@@ -977,7 +977,7 @@ local function launchClientOnce()
         -- ligne 1 : pythonw.exe du venv, ligne 2 : presence.py
         for _, path in ipairs(lines) do
             if not fileExists(path) then
-                log("Client introuvable : %s (projet déplacé ou client Python pas encore installé ? relance tools\\install_mod.ps1)", path)
+                log("Client not found: %s (project moved, or the Python client is not set up yet? run tools\\install_mod.ps1 again)", path)
                 return
             end
         end
@@ -985,7 +985,7 @@ local function launchClientOnce()
     elseif #lines == 1 then
         -- Ancien format (un seul chemin) : conservé pour les installations existantes.
         if not fileExists(lines[1]) then
-            log("Client introuvable : %s (relance tools\\install_mod.ps1)", lines[1])
+            log("Client not found: %s (run tools\\install_mod.ps1 again)", lines[1])
             return
         end
         if lines[1]:lower():find("%.vbs$") then
@@ -994,12 +994,12 @@ local function launchClientOnce()
             cmd = 'start "" "' .. lines[1] .. '"'
         end
     else
-        log("client_path.txt est vide : relance tools\\install_mod.ps1.")
+        log("client_path.txt is empty: run tools\\install_mod.ps1 again.")
         return
     end
 
     local ok, how, code = os.execute(cmd)
-    log("Client Discord lancé (%s) → %s %s %s", cmd, tostring(ok), tostring(how), tostring(code))
+    log("Discord client launched (%s) -> %s %s %s", cmd, tostring(ok), tostring(how), tostring(code))
 end
 
 -- ---------------------------------------------------------------------------
@@ -1018,13 +1018,13 @@ local function onTick()
         if tick % 2 == 0 then runDumpIfRequested() end
     end)
     if not ok then
-        log("Erreur dans la boucle : %s", tostring(err))
+        log("Error in the loop: %s", tostring(err))
     end
 end
 
 loadFlags()
-log("v%s chargé. État → %s", VERSION, STATE_PATH)
-log("Drapeaux : %s (fichier %s)", (function()
+log("v%s loaded. State -> %s", VERSION, STATE_PATH)
+log("Flags: %s (file %s)", (function()
     local ks = {} for k, v in pairs(flags) do ks[#ks + 1] = k .. "=" .. (v and "1" or "0") end
     table.sort(ks) return table.concat(ks, " ") end)(), FLAGS_PATH)
 

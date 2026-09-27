@@ -18,7 +18,7 @@ if (-not (Test-GameWin64 $GameWin64)) {
     $GameWin64 = Resolve-GameWin64 $GameWin64
 }
 if (-not $GameWin64) {
-    Write-Error "Dossier du jeu introuvable. Lance Install.bat pour le choisir, ou passe -GameWin64 '...\Gameface\Binaries\Win64'."
+    Write-Error "Game folder not found. Pass -GameWin64 '...\Gameface\Binaries\Win64' (the folder that contains SanAndreas.exe)."
     exit 1
 }
 
@@ -28,30 +28,30 @@ if (-not $User) {
 }
 
 if (-not (Test-Path $GameWin64)) {
-    Write-Error "Dossier introuvable : $GameWin64"
+    Write-Error "Folder not found: $GameWin64"
     exit 1
 }
 
-Write-Host "Dossier : $GameWin64"
-Write-Host "Compte  : $User"
-Write-Host "Droit   : Modifier (M), hérité par les sous-dossiers (CI) et fichiers (OI)"
+Write-Host "Folder  : $GameWin64"
+Write-Host "Account : $User"
+Write-Host "Right   : Modify (M), inherited by subfolders (CI) and files (OI)"
 Write-Host ""
 
 # (OI)(CI)M = Object Inherit + Container Inherit + Modify
 & icacls "$GameWin64" /grant "${User}:(OI)(CI)M" /T /C
 if ($LASTEXITCODE -ne 0) {
-    Write-Error "icacls a échoué (code $LASTEXITCODE)"
+    Write-Error "icacls failed (code $LASTEXITCODE)"
     exit $LASTEXITCODE
 }
 
 Write-Host ""
-Write-Host "Vérification :"
+Write-Host "Checking:"
 try {
     $test = Join-Path $GameWin64 "__permtest.tmp"
     [IO.File]::WriteAllText($test, "ok")
     Remove-Item $test
-    Write-Host "  Écriture OK." -ForegroundColor Green
+    Write-Host "  Write access OK." -ForegroundColor Green
 } catch {
-    Write-Host "  Échec : $($_.Exception.Message)" -ForegroundColor Red
+    Write-Host "  Failed: $($_.Exception.Message)" -ForegroundColor Red
     exit 1
 }

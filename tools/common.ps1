@@ -1,5 +1,5 @@
-﻿# Fonctions partagées par les scripts tools\*.ps1 : localisation du jeu,
-# lecture/écriture des fichiers texte du jeu, état de l'installation.
+﻿# Fonctions partagées par les scripts tools\*.ps1 : localisation du jeu et
+# lecture/écriture des fichiers texte du jeu.
 # Compatible Windows PowerShell 5.1 (celui livré avec Windows) et PowerShell 7.
 
 $script:ProjectRoot = Split-Path -Parent $PSScriptRoot
@@ -142,88 +142,4 @@ function Resolve-GameWin64($explicit) {
     $found = Find-GameWin64
     if ($found) { Save-GamePath $found }
     return $found
-}
-
-# --- État de l'installation ---------------------------------------------------
-function Get-ModVersion($win64) {
-    $lua = Join-Path $win64 "Mods\BetterPresence\Scripts\main.lua"
-    if (-not (Test-Path $lua)) { return $null }
-    $m = Select-String -Path $lua -Pattern '^local VERSION\s*=\s*"([^"]+)"' | Select-Object -First 1
-    if ($m) { return $m.Matches[0].Groups[1].Value }
-    return "?"
-}
-
-function Test-WriteAccess($path) {
-    if (-not (Test-Path $path)) { return $false }
-    $probe = Join-Path $path ".bp_write_test"
-    try {
-        [IO.File]::WriteAllText($probe, "x")
-        Remove-Item $probe -Force
-        return $true
-    } catch { return $false }
-}
-
-function Test-Ue4ssConfigured($win64) {
-    $ini = Join-Path $win64 "UE4SS-settings.ini"
-    if (-not (Test-Path $ini)) { return $false }
-    $txt = (Read-TextFile $ini).Text
-    return ($txt -match "(?m)^MajorVersion\s*=\s*4\s*$") -and
-           ($txt -match "(?m)^MinorVersion\s*=\s*26\s*$") -and
-           ($txt -match "(?m)^GuiConsoleEnabled\s*=\s*0\s*$")
-}
-
-function Get-ClientConfigPath {
-    return (Join-Path (Get-ProjectRoot) "client\config.json")
-}
-
-function Get-DiscordAppId {
-    $cfg = Get-ClientConfigPath
-    if (-not (Test-Path $cfg)) { return $null }
-    $m = Select-String -Path $cfg -Pattern '"discord_client_id"\s*:\s*"([^"]*)"' | Select-Object -First 1
-    if ($m) {
-        $v = $m.Matches[0].Groups[1].Value
-        if ($v -match '^\d{15,25}$') { return $v }
-    }
-    return $null
-}
-
-function Get-VenvPython {
-    $py = Join-Path (Get-ProjectRoot) "client\.venv\Scripts\python.exe"
-    if (Test-Path $py) { return $py }
-    return $null
-}
-
-# Runtime Visual C++ 2015-2022 : UE4SS.dll ne peut pas se charger sans lui.
-function Test-VcRedist {
-    foreach ($dll in @("vcruntime140.dll", "vcruntime140_1.dll", "msvcp140.dll")) {
-        if (-not (Test-Path (Join-Path $env:SystemRoot "System32\$dll"))) { return $false }
-    }
-    return $true
-}
-
-function Test-DiscordRunning {
-    $names = @("Discord", "DiscordCanary", "DiscordPTB", "DiscordDevelopment")
-    return $null -ne (Get-Process -Name $names -ErrorAction SilentlyContinue)
-}
-
-# Windows marque les fichiers issus d'une archive téléchargée ("Mark of the Web").
-# On lève la marque sur nos propres fichiers, sinon wscript/PowerShell peuvent
-# refuser de lancer le client ou afficher un avertissement à chaque démarrage.
-function Unblock-ProjectFiles {
-    $root = Get-ProjectRoot
-    foreach ($pattern in @("*.ps1", "*.bat", "*.py", "*.lua", "*.txt", "*.json")) {
-        Get-ChildItem $root -Recurse -Filter $pattern -ErrorAction SilentlyContinue |
-            Where-Object { $_.FullName -notmatch '\\\.venv\\|\\\.git\\' } |
-            Unblock-File -ErrorAction SilentlyContinue
-    }
-}
-
-# Recharge PATH depuis le registre (après l'installation de Python, par exemple).
-function Update-SessionPath {
-    $parts = @()
-    foreach ($scope in @("Machine", "User")) {
-        $v = [Environment]::GetEnvironmentVariable("Path", $scope)
-        if ($v) { $parts += $v }
-    }
-    if ($parts.Count -gt 0) { $env:Path = $parts -join ";" }
 }

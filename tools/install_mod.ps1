@@ -14,7 +14,7 @@ $ErrorActionPreference = "Stop"
 
 $GameWin64 = Resolve-GameWin64 $GameWin64
 if (-not $GameWin64) {
-    Write-Error "Dossier du jeu introuvable. Lance Install.bat pour le choisir, ou passe -GameWin64 '...\Gameface\Binaries\Win64'."
+    Write-Error "Game folder not found. Pass -GameWin64 '...\Gameface\Binaries\Win64' (the folder that contains SanAndreas.exe)."
     exit 1
 }
 
@@ -23,11 +23,11 @@ $src  = Join-Path $root "mod\BetterPresence"
 $dst  = Join-Path $GameWin64 "Mods\BetterPresence"
 
 if (-not (Test-Path (Join-Path $GameWin64 "UE4SS.dll"))) {
-    Write-Error "UE4SS.dll introuvable dans $GameWin64 - installe UE4SS d'abord (voir README)."
+    Write-Error "UE4SS.dll not found in $GameWin64 - install UE4SS first (see README)."
     exit 1
 }
 if (-not (Test-Path $src)) {
-    Write-Error "Source introuvable : $src"
+    Write-Error "Source not found: $src"
     exit 1
 }
 
@@ -42,11 +42,11 @@ if (Test-Path $script) {
     [IO.File]::WriteAllText((Join-Path $dst "client_path.txt"), "$pythonw`r`n$script",
         [Text.UTF8Encoding]::new($false))
     if (-not (Test-Path $pythonw)) {
-        Write-Warning "client\.venv absent : lance Install.bat (etape [C]) pour preparer le client Python."
+        Write-Warning "client\.venv is missing - set up the Python client first (see README, step 7)."
     }
 } else {
-    Write-Warning "client\presence.py introuvable : le client ne sera pas lance automatiquement."
+    Write-Warning "client\presence.py not found - the client will not start automatically."
 }
 
-Write-Host "Mod installé dans $dst"
+Write-Host "Mod installed in $dst"
 Get-ChildItem -Recurse -File $dst | ForEach-Object { "  " + $_.FullName.Substring($dst.Length + 1) + "  (" + $_.Length + " o)" }

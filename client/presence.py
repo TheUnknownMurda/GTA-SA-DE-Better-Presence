@@ -161,7 +161,7 @@ def read_state(path: Path, max_age: float) -> Optional[GameState]:
     except FileNotFoundError:
         return None
     except OSError as exc:
-        log.debug("Lecture de %s impossible : %s", path, exc)
+        log.debug("Could not read %s: %s", path, exc)
         return None
     try:
         data = json.loads(raw)
@@ -170,7 +170,7 @@ def read_state(path: Path, max_age: float) -> Optional[GameState]:
     if not isinstance(data, dict):
         return None
     if int(data.get("version", 1)) != STATE_SCHEMA_VERSION:
-        log.warning("Version de state.json inattendue : %s", data.get("version"))
+        log.warning("Unexpected state.json version: %s", data.get("version"))
 
     state = GameState.from_json(data)
     # Le mod écrit un timestamp Unix (os.time()). On tolère aussi l'absence de
@@ -350,19 +350,19 @@ class PresenceClient:
             rpc = Presence(self.cfg.client_id)
             rpc.connect()
         except (DiscordNotFound, DiscordError, PipeClosed, OSError, ConnectionError) as exc:
-            log.info("Discord injoignable (%s). Nouvel essai dans %.0fs.", exc, self.connect_backoff)
+            log.info("Discord unreachable (%s). Retrying in %.0fs.", exc, self.connect_backoff)
             self.next_connect_attempt = now + self.connect_backoff
             self.connect_backoff = min(self.connect_backoff * 2, 60)
             return False
         except Exception as exc:  # noqa: BLE001 — pypresence lève parfois des erreurs génériques
-            log.warning("Erreur de connexion Discord inattendue : %s", exc)
+            log.warning("Unexpected Discord connection error: %s", exc)
             self.next_connect_attempt = now + self.connect_backoff
             self.connect_backoff = min(self.connect_backoff * 2, 60)
             return False
         self.rpc = rpc
         self.connect_backoff = 2.0
         self.last_payload = None
-        log.info("Connecté à Discord (client_id=%s).", self.cfg.client_id)
+        log.info("Connected to Discord (client_id=%s).", self.cfg.client_id)
         return True
 
     def drop_connection(self) -> None:
@@ -378,7 +378,7 @@ class PresenceClient:
             pass
         self.rpc = None
         self.last_payload = None
-        log.info("Déconnecté de Discord.")
+        log.info("Disconnected from Discord.")
 
     # -- envoi ---------------------------------------------------------------
     def push(self, payload: dict[str, Any]) -> None:
@@ -392,40 +392,40 @@ class PresenceClient:
         try:
             self.rpc.update(**payload)
         except (PipeClosed, DiscordError, OSError, ConnectionError) as exc:
-            log.warning("Envoi à Discord échoué (%s), reconnexion.", exc)
+            log.warning("Sending to Discord failed (%s), reconnecting.", exc)
             self.rpc = None
             self.last_payload = None
             return
         except Exception as exc:  # noqa: BLE001
-            log.warning("Erreur d'envoi inattendue : %s", exc)
+            log.warning("Unexpected send error: %s", exc)
             self.rpc = None
             self.last_payload = None
             return
         self.last_payload = payload
         self.last_sent_at = time.monotonic()
-        log.info("Présence → %s | %s", payload.get("details"), payload.get("state"))
+        log.info("Presence -> %s | %s", payload.get("details"), payload.get("state"))
 
     # -- boucle --------------------------------------------------------------
     def run(self) -> None:
-        log.info("Surveillance de %s… (Ctrl+C pour quitter)", self.cfg.process_name)
+        log.info("Watching for %s... (Ctrl+C to quit)", self.cfg.process_name)
         game_seen = False
         while True:
             try:
                 proc = find_game(self.cfg.process_name)
                 if proc is None:
                     if game_seen:
-                        log.info("Jeu fermé.")
+                        log.info("Game closed.")
                         game_seen = False
                         self.drop_connection()
                         if self.cfg.exit_with_game:
-                            log.info("Arrêt du client (exit_with_game).")
+                            log.info("Stopping the client (exit_with_game).")
                             return
                     self.drop_connection()
                     time.sleep(max(self.cfg.poll_interval, 2.0))
                     continue
 
                 if not game_seen:
-                    log.info("Jeu détecté (PID %s).", proc.pid)
+                    log.info("Game detected (PID %s).", proc.pid)
                     game_seen = True
 
                 state = read_state(self.cfg.state_file, self.cfg.state_max_age)
@@ -442,7 +442,7 @@ class PresenceClient:
             except KeyboardInterrupt:
                 raise
             except Exception as exc:  # noqa: BLE001 — la boucle ne doit jamais mourir
-                log.exception("Erreur dans la boucle principale : %s", exc)
+                log.exception("Error in the main loop: %s", exc)
                 time.sleep(5)
 
 
@@ -476,7 +476,7 @@ def main() -> int:
     try:
         cfg = Config.load()
     except (OSError, json.JSONDecodeError) as exc:
-        log.error("Impossible de lire %s : %s", CONFIG_PATH, exc)
+        log.error("Could not read %s: %s", CONFIG_PATH, exc)
         return 1
     if args.stay:
         cfg.exit_with_game = False
@@ -485,7 +485,7 @@ def main() -> int:
     try:
         cfg.state_file.parent.mkdir(parents=True, exist_ok=True)
     except OSError as exc:
-        log.warning("Création de %s impossible : %s", cfg.state_file.parent, exc)
+        log.warning("Could not create %s: %s", cfg.state_file.parent, exc)
 
     if args.once:
         proc = find_game(cfg.process_name)
@@ -497,19 +497,19 @@ def main() -> int:
         return 0
 
     if not cfg.client_id or not cfg.client_id.isdigit():
-        log.error("discord_client_id manquant ou invalide dans config.json "
-                  "(crée une application sur https://discord.com/developers/applications).")
+        log.error("discord_client_id is missing or invalid in config.json "
+                  "(create an application at https://discord.com/developers/applications).")
         return 1
 
     if not acquire_single_instance():
-        log.info("Une autre instance du client tourne déjà, on s'arrête.")
+        log.info("Another client instance is already running, stopping.")
         return 0
 
     client = PresenceClient(cfg)
     try:
         client.run()
     except KeyboardInterrupt:
-        log.info("Arrêt demandé.")
+        log.info("Stop requested.")
     finally:
         client.drop_connection()
     return 0

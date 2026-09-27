@@ -13,14 +13,14 @@ $ErrorActionPreference = "Stop"
 
 $GameWin64 = Resolve-GameWin64 $GameWin64
 if (-not $GameWin64) {
-    Write-Error "Dossier du jeu introuvable. Lance Install.bat pour le choisir, ou passe -GameWin64 '...\Gameface\Binaries\Win64'."
+    Write-Error "Game folder not found. Pass -GameWin64 '...\Gameface\Binaries\Win64' (the folder that contains SanAndreas.exe)."
     exit 1
 }
 
 
 # --- UE4SS-settings.ini ---------------------------------------------------
 $ini = Join-Path $GameWin64 "UE4SS-settings.ini"
-if (-not (Test-Path $ini)) { Write-Error "Introuvable : $ini (UE4SS n'est pas installé ?)"; exit 1 }
+if (-not (Test-Path $ini)) { Write-Error "Not found: $ini (is UE4SS installed?)"; exit 1 }
 Backup-Once $ini
 $f = Read-TextFile $ini
 $wanted = @(
@@ -43,7 +43,7 @@ for ($i = 0; $i -lt $lines.Count; $i++) {
     }
 }
 Write-TextFile $ini ($lines -join $f.Nl) $f.Bom
-Write-Host "UE4SS-settings.ini configuré."
+Write-Host "UE4SS-settings.ini configured."
 
 # --- mods.txt -------------------------------------------------------------
 $mt = Join-Path $GameWin64 "Mods\mods.txt"
@@ -54,7 +54,7 @@ if (Test-Path $mt) {
         if ($_ -match '^(\w+)\s*:\s*\d\s*$' -and $Matches[1] -ne "Keybinds") { "$($Matches[1]) : 0" } else { $_ }
     }
     Write-TextFile $mt ($lines -join $f.Nl) $f.Bom
-    Write-Host "mods.txt : mods UE4SS livrés désactivés (sauf Keybinds)."
+    Write-Host "mods.txt: bundled UE4SS mods disabled (except Keybinds)."
 }
 
-Write-Host "Terminé. Le mod BetterPresence est activé par son fichier enabled.txt (voir install_mod.ps1)."
+Write-Host "Done. The BetterPresence mod is enabled by its own enabled.txt (see install_mod.ps1)."
