@@ -6,11 +6,19 @@
 # pas besoin de le déclarer dans mods.txt.
 
 param(
-    [string]$GameWin64 = "E:\Program Files\Rockstar Games\GTA San Andreas - Definitive Edition\Gameface\Binaries\Win64"
+    [string]$GameWin64   # par défaut : détection automatique (voir common.ps1)
 )
 
 $ErrorActionPreference = "Stop"
-$root = Split-Path -Parent $PSScriptRoot
+. (Join-Path $PSScriptRoot "common.ps1")
+
+$GameWin64 = Resolve-GameWin64 $GameWin64
+if (-not $GameWin64) {
+    Write-Error "Dossier du jeu introuvable. Lance Install.bat pour le choisir, ou passe -GameWin64 '...\Gameface\Binaries\Win64'."
+    exit 1
+}
+
+$root = Get-ProjectRoot
 $src  = Join-Path $root "mod\BetterPresence"
 $dst  = Join-Path $GameWin64 "Mods\BetterPresence"
 

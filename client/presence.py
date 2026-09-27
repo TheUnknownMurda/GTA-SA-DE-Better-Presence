@@ -491,8 +491,8 @@ def main() -> int:
         proc = find_game(cfg.process_name)
         state = read_state(cfg.state_file, cfg.state_max_age)
         start_ts = int(proc.info.get("create_time") or time.time()) if proc else int(time.time())
-        print("Jeu :", f"PID {proc.pid}" if proc else "non détecté")
-        print("État :", state)
+        print("Game    :", f"PID {proc.pid}" if proc else "not detected")
+        print("State   :", state)
         print("Payload :", json.dumps(truncate_fields(build_activity(cfg, state, start_ts)), ensure_ascii=False, indent=2))
         return 0
 

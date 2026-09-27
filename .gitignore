@@ -2,3 +2,4 @@ client/.venv/
 client/presence.log
 tools/downloads/
 __pycache__/
+tools/game_path.txt

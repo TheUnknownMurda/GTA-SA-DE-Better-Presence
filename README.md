@@ -41,7 +41,32 @@ The mission-title filter (`isMissionName` in `main.lua`) discards system message
 
 ## Installation
 
-### 1. UE4SS in the game folder
+### Quick install
+
+1. Get the files: **Code → Download ZIP** at the top of this page, then extract the folder anywhere you like (or `git clone`).
+2. Double-click **`Install.bat`** and choose `[1] Install everything`.
+
+The installer finds the game on its own (running process, Steam, Epic, Rockstar
+Launcher, usual folders), downloads UE4SS, configures it, installs the mod and
+sets up the Python client. It shows what is already done and what is missing, so
+you can also re-run a single step later; `[U]` removes everything again.
+
+Three things still need you, once:
+
+| What | Why | The installer… |
+|---|---|---|
+| A free [Nexus Mods](https://www.nexusmods.com/grandtheftautothetrilogy/mods/897) account | the signature file needed by UE4SS on game version 1.112 is hosted there and cannot be downloaded without a login | opens the page, then installs the downloaded archive for you |
+| [Python 3.8+](https://www.python.org/downloads/) (tick *Add python.exe to PATH*) | the client that talks to Discord is a small Python program | detects it and builds its virtual environment |
+| A free [Discord application](https://discord.com/developers/applications) | Discord only shows a presence that belongs to an application of yours | opens the page; you paste the Application ID back |
+
+Then start the game: the presence appears by itself, and stops when you quit.
+
+### Manual install
+
+Everything the installer does is also available as separate scripts, all of which
+locate the game automatically (or take `-GameWin64 "…\Gameface\Binaries\Win64"`).
+
+#### 1. UE4SS in the game folder
 
 1. Download [UE4SS v3.0.1](https://github.com/UE4SS-RE/RE-UE4SS/releases/tag/v3.0.1) (`UE4SS_v3.0.1.zip`) and extract it into
    `…\GTA San Andreas - Definitive Edition\Gameface\Binaries\Win64\` (next to `SanAndreas.exe`).
@@ -52,7 +77,7 @@ The mission-title filter (`isMissionName` in `main.lua`) discards system message
 
 Check: start the game, `Win64\UE4SS.log` must contain `[BetterPresence] v… chargé` and `%LOCALAPPDATA%\GTASADEBetterPresence\state.json` must be updated every second.
 
-### 2. Discord application
+#### 2. Discord application
 
 1. [discord.com/developers/applications](https://discord.com/developers/applications) → *New Application*. The application **name** is what Discord shows ("Playing …").
 2. Copy the *Application ID* into `client/config.json` → `discord_client_id`.
@@ -61,7 +86,7 @@ Check: start the game, `Win64\UE4SS.log` must contain `[BetterPresence] v… cha
    `logo` (large image), `onfoot`, `vehicle`, `menu`, `wanted_1` … `wanted_6` (small images). Ready-made icons are provided in [`assets/`](assets/) (512×512, regenerate with `tools/make_assets.py`); you only have to supply `logo` (game cover). Keys are configurable in `config.json` (`images`); a direct `https://` URL also works.
 4. If Discord shows Rockstar's basic presence instead, disable the Discord integration in the Rockstar Games Launcher (or in Discord: *Settings → Registered Games*).
 
-### 3. Python client
+#### 3. Python client
 
 ```bat
 cd client
@@ -86,6 +111,8 @@ start.bat            rem console mode, logs visible
 
 ## Development
 
+- `Install.bat` → `tools/installer.ps1` is the menu; the per-step scripts live in `tools/`
+  and share `tools/common.ps1` (game detection, text files, install state).
 - Edit `mod/BetterPresence/Scripts/main.lua`, then run `tools\install_mod.ps1` and press **Ctrl+R** in game (hot reload).
 - Lua syntax check without the game: `client\.venv\Scripts\python -c "from lupa import lua54 as L; L.LuaRuntime().compile(open('mod/BetterPresence/Scripts/main.lua', encoding='utf-8').read())"` (`pip install lupa`).
 - Exploration dump: create an empty `dump.request` file in the `state.json` folder → `dump_objects.txt` / `dump_widgets.txt`. The full UE4SS dump (Ctrl+J in game → `UE4SS_ObjectDump.txt`) lists every reflected class/function.
@@ -97,6 +124,9 @@ start.bat            rem console mode, logs visible
 - `GetAllChildren()` returns a table of `RemoteUnrealParam`: unwrap with `:get()`.
 - `FindAllOf` walks the whole `GUObjectArray` (~10 ms per call): only for persistent objects, then cached.
 - The UE4SS console (`ConsoleEnablerMod`, GUI) crashes this game: disabled by `configure_ue4ss.ps1`.
+- In Windows PowerShell 5.1, `"text".StartsWith([char]0xFEFF)` is **true** for any string
+  (culture-sensitive comparison ignores the BOM character), which silently eats the first
+  character of BOM-less files: detect the BOM on the raw bytes instead.
 - `KismetSystemLibrary.LaunchURL` hands the URL to the default browser instead of executing the file: not usable to start the client, `os.execute` is the only option.
 
 ## Limitations

@@ -7,11 +7,20 @@
 # À exécuter en administrateur. Ne touche qu'à ce dossier et son contenu.
 
 param(
-    [string]$GameWin64 = "E:\Program Files\Rockstar Games\GTA San Andreas - Definitive Edition\Gameface\Binaries\Win64",
+    [string]$GameWin64,   # par défaut : détection automatique (voir common.ps1)
     [string]$User = $null
 )
 
 $ErrorActionPreference = "Stop"
+. (Join-Path $PSScriptRoot "common.ps1")
+
+if (-not (Test-GameWin64 $GameWin64)) {
+    $GameWin64 = Resolve-GameWin64 $GameWin64
+}
+if (-not $GameWin64) {
+    Write-Error "Dossier du jeu introuvable. Lance Install.bat pour le choisir, ou passe -GameWin64 '...\Gameface\Binaries\Win64'."
+    exit 1
+}
 
 if (-not $User) {
     # Nom du compte qui a lancé le script (même en élévation, c'est le même compte).
