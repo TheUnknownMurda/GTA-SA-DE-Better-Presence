@@ -93,6 +93,7 @@ function Get-State {
                   (Test-Path (Join-Path $root "client\.venv\Lib\site-packages\psutil"))
     }
     $s.AppId = Get-DiscordAppId
+    $s.DiscordRunning = Test-DiscordRunning
     return $s
 }
 
@@ -130,6 +131,7 @@ function Show-Board($s) {
     Write-Host "  Presence" -ForegroundColor DarkGray
     Write-Status "Python client" ($null -ne $s.Venv -and $s.Deps) $(if ($s.Venv -and $s.Deps) { "virtualenv ready" } else { "use [C]" })
     Write-Status "Discord app ID" ($null -ne $s.AppId) $(if ($s.AppId) { $s.AppId } else { "use [D]" })
+    Write-Status "Discord running" $s.DiscordRunning $(if ($s.DiscordRunning) { "" } else { "start Discord to see the presence" }) (-not $s.DiscordRunning)
     Write-Host ""
 }
 
@@ -577,6 +579,7 @@ function Step-FullInstall {
     Write-Host ""
     if (Test-Ready $s) {
         Write-Host "  All set. Start the game: the presence appears by itself." -ForegroundColor Green
+        if (-not $s.DiscordRunning) { Write-Warn "Discord is not running - start it, or the presence has nowhere to show." }
     } else {
         Write-Warn "Some steps are still missing - see the list above."
     }
@@ -585,6 +588,7 @@ function Step-FullInstall {
 # --------------------------------------------------------------------------- #
 # Menu
 # --------------------------------------------------------------------------- #
+Unblock-ProjectFiles
 $script:Win64 = Resolve-GameWin64 $GameWin64
 
 while ($true) {

@@ -201,6 +201,23 @@ function Test-VcRedist {
     return $true
 }
 
+function Test-DiscordRunning {
+    $names = @("Discord", "DiscordCanary", "DiscordPTB", "DiscordDevelopment")
+    return $null -ne (Get-Process -Name $names -ErrorAction SilentlyContinue)
+}
+
+# Windows marque les fichiers issus d'une archive téléchargée ("Mark of the Web").
+# On lève la marque sur nos propres fichiers, sinon wscript/PowerShell peuvent
+# refuser de lancer le client ou afficher un avertissement à chaque démarrage.
+function Unblock-ProjectFiles {
+    $root = Get-ProjectRoot
+    foreach ($pattern in @("*.ps1", "*.bat", "*.vbs", "*.py", "*.lua", "*.txt", "*.json")) {
+        Get-ChildItem $root -Recurse -Filter $pattern -ErrorAction SilentlyContinue |
+            Where-Object { $_.FullName -notmatch '\\\.venv\\|\\\.git\\' } |
+            Unblock-File -ErrorAction SilentlyContinue
+    }
+}
+
 # Recharge PATH depuis le registre (après l'installation de Python, par exemple).
 function Update-SessionPath {
     $parts = @()
