@@ -8,7 +8,41 @@
 param([string]$GameWin64)
 
 $ErrorActionPreference = "Stop"
-. (Join-Path $PSScriptRoot "common.ps1")
+
+# --- Chargement des fonctions partagées ------------------------------------
+# Autonome : ne dépend d'aucune fonction de common.ps1, puisque c'est justement
+# ce fichier que l'on essaie de lire. Windows refuse parfois la lecture des
+# fichiers venant d'une archive téléchargée ou d'un dossier partagé de machine
+# virtuelle ; on lève la marque « fichier provenant d'Internet » et on explique
+# quoi faire plutôt que de s'arrêter sur un message obscur.
+$commonPath = Join-Path $PSScriptRoot "common.ps1"
+
+if (-not (Test-Path $commonPath)) {
+    Write-Host ""
+    Write-Host "  tools\common.ps1 is missing." -ForegroundColor Red
+    Write-Host "  Download the project again and keep the whole folder together." -ForegroundColor Gray
+    Write-Host ""
+    exit 1
+}
+
+Get-ChildItem $PSScriptRoot -Filter "*.ps1" -ErrorAction SilentlyContinue |
+    Unblock-File -ErrorAction SilentlyContinue
+
+try {
+    . $commonPath
+} catch {
+    Write-Host ""
+    Write-Host "  Windows refused to read tools\common.ps1:" -ForegroundColor Red
+    Write-Host "    $($_.Exception.Message)" -ForegroundColor Gray
+    Write-Host ""
+    Write-Host "  What usually fixes it:" -ForegroundColor Yellow
+    Write-Host "    1. Right-click the downloaded .zip > Properties > tick 'Unblock', then extract it again." -ForegroundColor Gray
+    Write-Host "    2. Move the folder to a simple local path such as C:\BetterPresence" -ForegroundColor Gray
+    Write-Host "       (a shared folder of a virtual machine, a network drive or OneDrive can block reads)." -ForegroundColor Gray
+    Write-Host "    3. Check your antivirus / 'Controlled folder access' history." -ForegroundColor Gray
+    Write-Host ""
+    exit 1
+}
 
 $root = Get-ProjectRoot
 $UE4SS_VERSION = "v3.0.1"
