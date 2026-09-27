@@ -192,3 +192,21 @@ function Get-VenvPython {
     if (Test-Path $py) { return $py }
     return $null
 }
+
+# Runtime Visual C++ 2015-2022 : UE4SS.dll ne peut pas se charger sans lui.
+function Test-VcRedist {
+    foreach ($dll in @("vcruntime140.dll", "vcruntime140_1.dll", "msvcp140.dll")) {
+        if (-not (Test-Path (Join-Path $env:SystemRoot "System32\$dll"))) { return $false }
+    }
+    return $true
+}
+
+# Recharge PATH depuis le registre (après l'installation de Python, par exemple).
+function Update-SessionPath {
+    $parts = @()
+    foreach ($scope in @("Machine", "User")) {
+        $v = [Environment]::GetEnvironmentVariable("Path", $scope)
+        if ($v) { $parts += $v }
+    }
+    if ($parts.Count -gt 0) { $env:Path = $parts -join ";" }
+}

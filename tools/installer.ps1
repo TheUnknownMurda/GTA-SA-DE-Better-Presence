@@ -16,6 +16,10 @@ $UE4SS_ZIP = "UE4SS_v3.0.1.zip"
 $UE4SS_URL = "https://github.com/UE4SS-RE/RE-UE4SS/releases/download/$UE4SS_VERSION/$UE4SS_ZIP"
 $SIGNATURES_URL = "https://www.nexusmods.com/grandtheftautothetrilogy/mods/897?tab=files"
 $DISCORD_APPS_URL = "https://discord.com/developers/applications"
+# Repli quand winget n'est pas disponible : installateur officiel python.org.
+$PYTHON_VERSION = "3.13.7"
+$PYTHON_URL = "https://www.python.org/ftp/python/$PYTHON_VERSION/python-$PYTHON_VERSION-amd64.exe"
+$VCREDIST_URL = "https://aka.ms/vs/17/release/vc_redist.x64.exe"
 
 $script:Win64 = $null
 
@@ -80,6 +84,8 @@ function Get-State {
             $s.ClientPathOk = ($p -eq (Join-Path $root "client\start_hidden.vbs"))
         }
     }
+    $s.VcRedist = Test-VcRedist
+    $s.Python = Find-SystemPython
     $s.Venv = Get-VenvPython
     $s.Deps = $false
     if ($s.Venv) {
@@ -93,30 +99,43 @@ function Get-State {
 function Show-Board($s) {
     Write-Title
     Write-Host ""
+    Write-Host "  Prerequisites" -ForegroundColor DarkGray
     if ($s.GameOk) {
         Write-Status "Game folder" $true $s.Win64
     } else {
         Write-Status "Game folder" $false "not found - use [2] to choose it"
     }
+    Write-Status "Python" ($null -ne $s.Python) $(if ($s.Python) { $s.Python.Version } else { "not installed - use [3]" })
+    Write-Status "Visual C++ runtime" $s.VcRedist $(if ($s.VcRedist) { "2015-2022 x64" } else { "needed by UE4SS - use [4]" })
     if ($s.GameOk) {
         Write-Status "Write access" $s.Writable $(if ($s.Writable) { "" } else { "needed by UE4SS - use [5]" })
-        Write-Status "UE4SS" $s.Ue4ss $(if ($s.Ue4ss) { "$UE4SS_VERSION" } else { "not installed - use [3]" })
-        Write-Status "SA signatures" $s.Signatures $(if ($s.Signatures) { "" } else { "required on 1.112 - use [4]" })
-        Write-Status "UE4SS settings" $s.Configured $(if ($s.Configured) { "UE 4.26, consoles off, hot reload" } else { "use [6]" })
-        if ($s.ModVersion) {
-            Write-Status "BetterPresence mod" $s.ClientPathOk "v$($s.ModVersion)$(if (-not $s.ClientPathOk) { ' - launcher path outdated, use [7]' })" (-not $s.ClientPathOk)
-        } else {
-            Write-Status "BetterPresence mod" $false "not installed - use [7]"
-        }
     }
-    Write-Status "Python client" ($null -ne $s.Venv -and $s.Deps) $(if ($s.Venv -and $s.Deps) { "virtualenv ready" } else { "use [8]" })
-    Write-Status "Discord app ID" ($null -ne $s.AppId) $(if ($s.AppId) { $s.AppId } else { "use [9]" })
+
+    Write-Host ""
+    Write-Host "  Game" -ForegroundColor DarkGray
+    if ($s.GameOk) {
+        Write-Status "UE4SS" $s.Ue4ss $(if ($s.Ue4ss) { "$UE4SS_VERSION" } else { "not installed - use [6]" })
+        Write-Status "SA signatures" $s.Signatures $(if ($s.Signatures) { "" } else { "required on 1.112 - use [7]" })
+        Write-Status "UE4SS settings" $s.Configured $(if ($s.Configured) { "UE 4.26, consoles off, hot reload" } else { "use [8]" })
+        if ($s.ModVersion) {
+            Write-Status "BetterPresence mod" $s.ClientPathOk "v$($s.ModVersion)$(if (-not $s.ClientPathOk) { ' - launcher path outdated, use [9]' })" (-not $s.ClientPathOk)
+        } else {
+            Write-Status "BetterPresence mod" $false "not installed - use [9]"
+        }
+    } else {
+        Write-Info "(set the game folder to see these)"
+    }
+
+    Write-Host ""
+    Write-Host "  Presence" -ForegroundColor DarkGray
+    Write-Status "Python client" ($null -ne $s.Venv -and $s.Deps) $(if ($s.Venv -and $s.Deps) { "virtualenv ready" } else { "use [C]" })
+    Write-Status "Discord app ID" ($null -ne $s.AppId) $(if ($s.AppId) { $s.AppId } else { "use [D]" })
     Write-Host ""
 }
 
 function Test-Ready($s) {
-    return $s.GameOk -and $s.Ue4ss -and $s.Signatures -and $s.Configured -and $s.ModVersion -and
-           $s.ClientPathOk -and $s.Venv -and $s.Deps -and $s.AppId
+    return $s.GameOk -and $s.Python -and $s.VcRedist -and $s.Ue4ss -and $s.Signatures -and
+           $s.Configured -and $s.ModVersion -and $s.ClientPathOk -and $s.Venv -and $s.Deps -and $s.AppId
 }
 
 # --------------------------------------------------------------------------- #
@@ -289,7 +308,7 @@ function Step-FixPermissions {
 function Step-ConfigureUe4ss {
     if (-not (Test-GameWin64 $script:Win64)) { Write-Err "Set the game folder first ([2])."; return $false }
     if (-not (Test-Path (Join-Path $script:Win64 "UE4SS-settings.ini"))) {
-        Write-Err "UE4SS is not installed yet ([3])."; return $false
+        Write-Err "UE4SS is not installed yet ([6])."; return $false
     }
     Write-Step "Configuring UE4SS for San Andreas"
     & (Join-Path $PSScriptRoot "configure_ue4ss.ps1") -GameWin64 $script:Win64 | ForEach-Object { Write-Info $_ }
@@ -298,7 +317,7 @@ function Step-ConfigureUe4ss {
 
 function Step-InstallMod {
     if (-not (Test-GameWin64 $script:Win64)) { Write-Err "Set the game folder first ([2])."; return $false }
-    if (-not (Test-Path (Join-Path $script:Win64 "UE4SS.dll"))) { Write-Err "Install UE4SS first ([3])."; return $false }
+    if (-not (Test-Path (Join-Path $script:Win64 "UE4SS.dll"))) { Write-Err "Install UE4SS first ([6])."; return $false }
     Write-Step "Installing the BetterPresence mod"
     & (Join-Path $PSScriptRoot "install_mod.ps1") -GameWin64 $script:Win64 | ForEach-Object { Write-Info $_ }
     $v = Get-ModVersion $script:Win64
@@ -306,9 +325,18 @@ function Step-InstallMod {
     return $false
 }
 
+function Test-PythonExe($exe, $prefix) {
+    try {
+        $out = & $exe @($prefix + "--version") 2>&1
+        if ($LASTEXITCODE -eq 0 -and "$out" -match "Python 3\.(\d+)" -and [int]$Matches[1] -ge 8) {
+            return @{ Exe = $exe; Prefix = $prefix; Version = "$out".Trim() }
+        }
+    } catch { }
+    return $null
+}
+
 function Find-SystemPython {
-    # Chaque candidat : nom de l'exécutable + arguments à placer avant les nôtres
-    # (le lanceur "py" a besoin de -3 pour choisir Python 3).
+    # 1. Dans le PATH. Le lanceur "py" a besoin de -3 pour choisir Python 3.
     $candidates = @(
         @{ Exe = "py";      Prefix = @("-3") },
         @{ Exe = "python";  Prefix = @() },
@@ -318,14 +346,114 @@ function Find-SystemPython {
         $cmd = Get-Command $c.Exe -ErrorAction SilentlyContinue
         if (-not $cmd) { continue }
         if ($cmd.Source -like "*WindowsApps*") { continue }  # alias du Microsoft Store
-        try {
-            $out = & $c.Exe @($c.Prefix + "--version") 2>&1
-            if ($LASTEXITCODE -eq 0 -and "$out" -match "Python 3\.(\d+)" -and [int]$Matches[1] -ge 8) {
-                return @{ Exe = $c.Exe; Prefix = $c.Prefix; Version = "$out".Trim() }
-            }
-        } catch { }
+        $found = Test-PythonExe $c.Exe $c.Prefix
+        if ($found) { return $found }
+    }
+    # 2. Emplacements d'installation habituels (PATH pas encore rafraîchi).
+    $roots = @(
+        (Join-Path $env:LOCALAPPDATA "Programs\Python"),
+        (Join-Path $env:ProgramFiles "Python"),
+        "$env:SystemDrive\"
+    )
+    foreach ($root in $roots) {
+        if (-not (Test-Path $root)) { continue }
+        $exes = Get-ChildItem (Join-Path $root "Python3*\python.exe") -ErrorAction SilentlyContinue |
+            Sort-Object FullName -Descending
+        foreach ($exe in $exes) {
+            $found = Test-PythonExe $exe.FullName @()
+            if ($found) { return $found }
+        }
     }
     return $null
+}
+
+function Step-InstallPython {
+    Write-Step "Installing Python"
+    $py = Find-SystemPython
+    if ($py) {
+        Write-Ok "Already installed: $($py.Version)"
+        return $true
+    }
+    Write-Info "The Discord client is a small Python program, so Python 3 is needed."
+    Write-Info "It is installed for your user only - no admin rights, nothing else changed."
+
+    # 1) winget quand il est disponible (installe la version courante, gère le PATH).
+    $winget = Get-Command winget -ErrorAction SilentlyContinue
+    if ($winget) {
+        Write-Info "Installing through winget (Windows package manager)..."
+        if (Confirm-Action "Install Python with winget?") {
+            & winget install --exact --id Python.Python.3.13 --scope user `
+                --accept-source-agreements --accept-package-agreements --silent
+            Update-SessionPath
+            $py = Find-SystemPython
+            if ($py) { Write-Ok "Installed: $($py.Version)"; return $true }
+            Write-Warn "winget did not complete; falling back to the python.org installer."
+        }
+    }
+
+    # 2) Installateur officiel python.org.
+    Write-Info "Source : $PYTHON_URL"
+    Write-Info "Size   : about 28 MB - the official python.org installer"
+    if (-not (Confirm-Action "Download and install Python $PYTHON_VERSION now?")) {
+        Write-Warn "Skipped."
+        if (Confirm-Action "Open the Python download page instead?") { Start-Process "https://www.python.org/downloads/" }
+        return $false
+    }
+    $tmp = Join-Path ([IO.Path]::GetTempPath()) ("bp_python_" + [Guid]::NewGuid().ToString("N"))
+    New-Item -ItemType Directory -Force -Path $tmp | Out-Null
+    $exe = Join-Path $tmp "python-installer.exe"
+    try {
+        [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+        Write-Info "Downloading..."
+        Invoke-WebRequest -Uri $PYTHON_URL -OutFile $exe -UseBasicParsing
+        Write-Info "Installing (a progress window appears, this takes a minute)..."
+        $p = Start-Process $exe -Wait -PassThru -ArgumentList @(
+            "/passive", "InstallAllUsers=0", "PrependPath=1", "Include_launcher=1", "Include_test=0"
+        )
+        if ($p.ExitCode -ne 0 -and $p.ExitCode -ne 3010) {
+            Write-Err "The Python installer returned code $($p.ExitCode)."
+            return $false
+        }
+        Update-SessionPath
+        $py = Find-SystemPython
+        if ($py) { Write-Ok "Installed: $($py.Version)"; return $true }
+        Write-Err "Python was installed but could not be found - restart this installer."
+        return $false
+    } catch {
+        Write-Err "Failed: $($_.Exception.Message)"
+        return $false
+    } finally {
+        Remove-Item $tmp -Recurse -Force -ErrorAction SilentlyContinue
+    }
+}
+
+function Step-InstallVcRedist {
+    Write-Step "Installing the Visual C++ runtime"
+    if (Test-VcRedist) { Write-Ok "Already installed."; return $true }
+    Write-Info "UE4SS cannot load without the Microsoft Visual C++ 2015-2022 runtime."
+    Write-Info "Source : $VCREDIST_URL"
+    Write-Info "Size   : about 25 MB, from Microsoft. A Windows admin prompt will appear."
+    if (-not (Confirm-Action "Download and install it now?")) { Write-Warn "Skipped."; return $false }
+
+    $tmp = Join-Path ([IO.Path]::GetTempPath()) ("bp_vcredist_" + [Guid]::NewGuid().ToString("N"))
+    New-Item -ItemType Directory -Force -Path $tmp | Out-Null
+    $exe = Join-Path $tmp "vc_redist.x64.exe"
+    try {
+        [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+        Write-Info "Downloading..."
+        Invoke-WebRequest -Uri $VCREDIST_URL -OutFile $exe -UseBasicParsing
+        Write-Info "Installing..."
+        $p = Start-Process $exe -Wait -PassThru -Verb RunAs -ArgumentList @("/install", "/passive", "/norestart")
+        # 0 = installé, 3010 = redémarrage conseillé, 1638 = version plus récente déjà là
+        if ($p.ExitCode -in @(0, 3010, 1638)) { Write-Ok "Visual C++ runtime ready."; return $true }
+        Write-Err "The installer returned code $($p.ExitCode)."
+        return $false
+    } catch {
+        Write-Err "Failed: $($_.Exception.Message)"
+        return $false
+    } finally {
+        Remove-Item $tmp -Recurse -Force -ErrorAction SilentlyContinue
+    }
 }
 
 function Step-SetupClient {
@@ -334,10 +462,10 @@ function Step-SetupClient {
     if (-not $venv) {
         $py = Find-SystemPython
         if (-not $py) {
-            Write-Err "Python 3.8+ was not found."
-            Write-Info "Install it from python.org (tick 'Add python.exe to PATH'), then run this step again."
-            if (Confirm-Action "Open the Python download page?") { Start-Process "https://www.python.org/downloads/" }
-            return $false
+            Write-Warn "Python 3.8+ was not found - installing it first."
+            if (-not (Step-InstallPython)) { return $false }
+            $py = Find-SystemPython
+            if (-not $py) { return $false }
         }
         Write-Info "Using $($py.Version)"
         Write-Info "Creating the virtual environment (client\.venv)..."
@@ -393,7 +521,7 @@ function Step-SetAppId {
 function Step-Test {
     Write-Step "Checking the client"
     $venv = Get-VenvPython
-    if (-not $venv) { Write-Err "Set up the Python client first ([8])."; return }
+    if (-not $venv) { Write-Err "Set up the Python client first ([C])."; return }
     $env:PYTHONIOENCODING = "utf-8"
     & $venv (Join-Path $root "client\presence.py") --once 2>&1 | ForEach-Object { Write-Info $_ }
     Write-Host ""
@@ -429,6 +557,10 @@ function Step-FullInstall {
     $s = Get-State
     if (-not $s.GameOk) { if (-not (Step-FindGame)) { return } }
     $s = Get-State
+    if (-not $s.Python) { Step-InstallPython | Out-Null }
+    $s = Get-State
+    if (-not $s.VcRedist) { Step-InstallVcRedist | Out-Null }
+    $s = Get-State
     if (-not $s.Writable) { Step-FixPermissions | Out-Null }
     $s = Get-State
     if (-not $s.Ue4ss) { if (-not (Step-InstallUe4ss)) { return } }
@@ -459,25 +591,29 @@ while ($true) {
     $s = Get-State
     Show-Board $s
     Write-Host "  [1] Install everything (recommended)" -ForegroundColor White
-    Write-Host "  [2] Choose the game folder            [3] Install UE4SS"
-    Write-Host "  [4] Install SA signatures             [5] Fix folder permissions"
-    Write-Host "  [6] Configure UE4SS                   [7] Install / update the mod"
-    Write-Host "  [8] Set up the Python client          [9] Set the Discord application"
-    Write-Host "  [T] Test the client                   [U] Uninstall"
-    Write-Host "  [Q] Quit"
+    Write-Host ""
+    Write-Host "  [2] Choose the game folder            [6] Install UE4SS"
+    Write-Host "  [3] Install Python                    [7] Install SA signatures"
+    Write-Host "  [4] Install Visual C++ runtime        [8] Configure UE4SS"
+    Write-Host "  [5] Fix folder permissions            [9] Install / update the mod"
+    Write-Host ""
+    Write-Host "  [C] Set up the Python client          [D] Set the Discord application"
+    Write-Host "  [T] Test the client                   [U] Uninstall            [Q] Quit"
     Write-Host ""
     $choice = (Read-Host "  Your choice").Trim().ToUpper()
 
     switch ($choice) {
         "1" { Step-FullInstall; Pause-Menu }
         "2" { Step-PickGame | Out-Null; Pause-Menu }
-        "3" { Step-InstallUe4ss | Out-Null; Pause-Menu }
-        "4" { Step-InstallSignatures | Out-Null; Pause-Menu }
+        "3" { Step-InstallPython | Out-Null; Pause-Menu }
+        "4" { Step-InstallVcRedist | Out-Null; Pause-Menu }
         "5" { Step-FixPermissions | Out-Null; Pause-Menu }
-        "6" { Step-ConfigureUe4ss | Out-Null; Pause-Menu }
-        "7" { Step-InstallMod | Out-Null; Pause-Menu }
-        "8" { Step-SetupClient | Out-Null; Pause-Menu }
-        "9" { Step-SetAppId | Out-Null; Pause-Menu }
+        "6" { Step-InstallUe4ss | Out-Null; Pause-Menu }
+        "7" { Step-InstallSignatures | Out-Null; Pause-Menu }
+        "8" { Step-ConfigureUe4ss | Out-Null; Pause-Menu }
+        "9" { Step-InstallMod | Out-Null; Pause-Menu }
+        "C" { Step-SetupClient | Out-Null; Pause-Menu }
+        "D" { Step-SetAppId | Out-Null; Pause-Menu }
         "T" { Step-Test; Pause-Menu }
         "U" { Step-Uninstall; Pause-Menu }
         "Q" { Write-Host ""; return }

@@ -47,17 +47,21 @@ The mission-title filter (`isMissionName` in `main.lua`) discards system message
 2. Double-click **`Install.bat`** and choose `[1] Install everything`.
 
 The installer finds the game on its own (running process, Steam, Epic, Rockstar
-Launcher, usual folders), downloads UE4SS, configures it, installs the mod and
-sets up the Python client. It shows what is already done and what is missing, so
-you can also re-run a single step later; `[U]` removes everything again.
+Launcher, usual folders) and takes care of the requirements, each one shown as
+its own line so you can see what is already done and what is missing:
 
-Three things still need you, once:
+| Requirement | How it is installed |
+|---|---|
+| **Python 3.8+** | through winget, or the official python.org installer downloaded for you (user scope, no admin) |
+| **Visual C++ 2015-2022 runtime** | downloaded from Microsoft — UE4SS cannot load without it |
+| **UE4SS 3.0.1** | downloaded from its GitHub release and extracted next to `SanAndreas.exe` |
+| **Write access to the game folder** | one admin prompt, only when the game sits in `Program Files` |
+| **UE4SS settings, the mod, the Python client** | done for you |
+| **SA signature file** | hosted on [Nexus Mods](https://www.nexusmods.com/grandtheftautothetrilogy/mods/897), which needs a free account: the installer opens the page and installs the archive you downloaded |
+| **A Discord application** | you create it in two clicks at [discord.com/developers](https://discord.com/developers/applications); the installer opens the page and you paste the Application ID back |
 
-| What | Why | The installer… |
-|---|---|---|
-| A free [Nexus Mods](https://www.nexusmods.com/grandtheftautothetrilogy/mods/897) account | the signature file needed by UE4SS on game version 1.112 is hosted there and cannot be downloaded without a login | opens the page, then installs the downloaded archive for you |
-| [Python 3.8+](https://www.python.org/downloads/) (tick *Add python.exe to PATH*) | the client that talks to Discord is a small Python program | detects it and builds its virtual environment |
-| A free [Discord application](https://discord.com/developers/applications) | Discord only shows a presence that belongs to an application of yours | opens the page; you paste the Application ID back |
+Every step is also available on its own from the menu, and `[U]` removes
+everything again (the mod alone, or UE4SS as well, leaving the game untouched).
 
 Then start the game: the presence appears by itself, and stops when you quit.
 
