@@ -10,17 +10,47 @@ param([string]$GameWin64)
 $ErrorActionPreference = "Stop"
 
 # --- Chargement des fonctions partagées ------------------------------------
-# Autonome : ne dépend d'aucune fonction de common.ps1, puisque c'est justement
-# ce fichier que l'on essaie de lire. Windows refuse parfois la lecture des
-# fichiers venant d'une archive téléchargée ou d'un dossier partagé de machine
-# virtuelle ; on lève la marque « fichier provenant d'Internet » et on explique
-# quoi faire plutôt que de s'arrêter sur un message obscur.
+# Tout ce bloc est autonome (aucune fonction de common.ps1) puisque c'est
+# justement ce fichier que l'on essaie de lire. Copier un dossier d'une machine
+# à l'autre laisse souvent des droits NTFS inutilisables ; on répare tout seul
+# plutôt que d'exiger de l'utilisateur qu'il s'en occupe.
+$projectRoot = Split-Path -Parent $PSScriptRoot
 $commonPath = Join-Path $PSScriptRoot "common.ps1"
+
+function Test-CanRead($path) {
+    try {
+        $fs = [IO.File]::OpenRead($path)
+        $fs.Close()
+        return $true
+    } catch { return $false }
+}
+
+function Repair-FolderAccess($folder) {
+    # Rend au dossier des droits hérités normaux, puis s'ajoute explicitement.
+    $me = [Security.Principal.WindowsIdentity]::GetCurrent().Name
+    & icacls "$folder" /reset /T /C /Q 2>&1 | Out-Null
+    & icacls "$folder" /grant "${me}:(OI)(CI)M" /T /C /Q 2>&1 | Out-Null
+}
+
+function Repair-FolderAccessElevated($folder) {
+    # Quand les fichiers appartiennent à un autre compte (copie depuis une autre
+    # machine), il faut d'abord en reprendre la propriété : cela demande l'UAC.
+    $me = [Security.Principal.WindowsIdentity]::GetCurrent().Name
+    $cmd = "icacls '$folder' /setowner '$me' /T /C /Q; " +
+           "icacls '$folder' /reset /T /C /Q; " +
+           "icacls '$folder' /grant '${me}:(OI)(CI)M' /T /C /Q"
+    try {
+        $p = Start-Process powershell.exe -Verb RunAs -Wait -PassThru -ArgumentList @(
+            "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", $cmd
+        )
+        return ($p.ExitCode -eq 0)
+    } catch { return $false }
+}
 
 if (-not (Test-Path $commonPath)) {
     Write-Host ""
     Write-Host "  tools\common.ps1 is missing." -ForegroundColor Red
-    Write-Host "  Download the project again and keep the whole folder together." -ForegroundColor Gray
+    Write-Host "  Copy the whole project folder, not just some of its files." -ForegroundColor Gray
     Write-Host ""
     exit 1
 }
@@ -28,18 +58,38 @@ if (-not (Test-Path $commonPath)) {
 Get-ChildItem $PSScriptRoot -Filter "*.ps1" -ErrorAction SilentlyContinue |
     Unblock-File -ErrorAction SilentlyContinue
 
+if (-not (Test-CanRead $commonPath)) {
+    Write-Host ""
+    Write-Host "  Windows is refusing to read the project files." -ForegroundColor Yellow
+    Write-Host "  This happens after copying the folder from another computer." -ForegroundColor Gray
+    Write-Host "  Repairing the folder permissions..." -ForegroundColor Gray
+    Repair-FolderAccess $projectRoot
+    Get-ChildItem $PSScriptRoot -Filter "*.ps1" -ErrorAction SilentlyContinue |
+        Unblock-File -ErrorAction SilentlyContinue
+}
+
+if (-not (Test-CanRead $commonPath)) {
+    Write-Host "  Still blocked. The files probably belong to another account," -ForegroundColor Gray
+    Write-Host "  which needs administrator rights to fix (one UAC prompt)." -ForegroundColor Gray
+    $answer = Read-Host "  Repair as administrator? [Y/n]"
+    if ($answer -notmatch '^(n|no|non)$') {
+        Repair-FolderAccessElevated $projectRoot | Out-Null
+    }
+}
+
 try {
     . $commonPath
 } catch {
     Write-Host ""
-    Write-Host "  Windows refused to read tools\common.ps1:" -ForegroundColor Red
+    Write-Host "  Windows still refuses to read tools\common.ps1:" -ForegroundColor Red
     Write-Host "    $($_.Exception.Message)" -ForegroundColor Gray
     Write-Host ""
-    Write-Host "  What usually fixes it:" -ForegroundColor Yellow
-    Write-Host "    1. Right-click the downloaded .zip > Properties > tick 'Unblock', then extract it again." -ForegroundColor Gray
-    Write-Host "    2. Move the folder to a simple local path such as C:\BetterPresence" -ForegroundColor Gray
-    Write-Host "       (a shared folder of a virtual machine, a network drive or OneDrive can block reads)." -ForegroundColor Gray
-    Write-Host "    3. Check your antivirus / 'Controlled folder access' history." -ForegroundColor Gray
+    Write-Host "  At this point it is almost always the antivirus." -ForegroundColor Yellow
+    Write-Host "    - Open its protection history (Bitdefender, Avast, Norton, Windows Security...)" -ForegroundColor Gray
+    Write-Host "      and allow this folder, or add it to the exclusions:" -ForegroundColor Gray
+    Write-Host "      $projectRoot" -ForegroundColor White
+    Write-Host "    - Windows Security > Ransomware protection > 'Controlled folder access'" -ForegroundColor Gray
+    Write-Host "      can also block it; allow powershell.exe or turn it off while installing." -ForegroundColor Gray
     Write-Host ""
     exit 1
 }
