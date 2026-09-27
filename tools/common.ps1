@@ -211,7 +211,7 @@ function Test-DiscordRunning {
 # refuser de lancer le client ou afficher un avertissement à chaque démarrage.
 function Unblock-ProjectFiles {
     $root = Get-ProjectRoot
-    foreach ($pattern in @("*.ps1", "*.bat", "*.vbs", "*.py", "*.lua", "*.txt", "*.json")) {
+    foreach ($pattern in @("*.ps1", "*.bat", "*.py", "*.lua", "*.txt", "*.json")) {
         Get-ChildItem $root -Recurse -Filter $pattern -ErrorAction SilentlyContinue |
             Where-Object { $_.FullName -notmatch '\\\.venv\\|\\\.git\\' } |
             Unblock-File -ErrorAction SilentlyContinue

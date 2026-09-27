@@ -29,7 +29,7 @@
 ]]
 
 local MOD_TAG   = "[BetterPresence]"
-local VERSION   = "0.6.2"
+local VERSION   = "0.7.0"
 local SCHEMA    = 1
 local POLL_MS   = 1000
 
@@ -949,27 +949,55 @@ end
 -- ---------------------------------------------------------------------------
 -- Lancement du client Discord
 -- ---------------------------------------------------------------------------
--- os.execute("wscript start_hidden.vbs") : seul moyen de lancer un processus
--- depuis le Lua d'UE4SS. Une console cmd apparaît ~100 ms (le jeu n'a pas de
--- console) ; on ne le fait qu'une fois, au démarrage. Écarté : LaunchURL
--- d'Unreal, qui envoie l'URL au navigateur par défaut au lieu d'exécuter le fichier.
+-- os.execute est le seul moyen de lancer un processus depuis le Lua d'UE4SS.
+-- On démarre directement pythonw.exe (pas de console, donc pas de fenêtre) ;
+-- une console cmd apparaît ~100 ms, une seule fois, au démarrage du jeu.
+-- Écarté : un lanceur .vbs en fenêtre cachée (signature typique d'un logiciel
+-- malveillant, signalée par les antivirus) et LaunchURL d'Unreal, qui envoie
+-- l'URL au navigateur par défaut au lieu d'exécuter le fichier.
 -- Le client est à instance unique et se ferme tout seul quand le jeu se ferme.
 local clientLaunched = false
 
 local function launchClientOnce()
     if clientLaunched or not flags.launch_client then return end
     clientLaunched = true
-    local path = readFile(CLIENT_PATH_FILE)
-    path = path and trim(path:match("[^\r\n]+") or "") or ""
-    if path == "" then
-        log("Pas de client à lancer (%s absent) : lance client\\start_hidden.vbs toi-même ou relance tools\\install_mod.ps1.", CLIENT_PATH_FILE)
+    local content = readFile(CLIENT_PATH_FILE)
+    if not content then
+        log("Pas de client à lancer (%s absent) : relance tools\\install_mod.ps1.", CLIENT_PATH_FILE)
         return
     end
-    if not fileExists(path) then
-        log("Client introuvable : %s (projet déplacé ? relance tools/install_mod.ps1 pour mettre à jour client_path.txt)", path)
+    local lines = {}
+    for line in content:gmatch("[^\r\n]+") do
+        line = trim(line)
+        if line ~= "" then lines[#lines + 1] = line end
+    end
+
+    local cmd
+    if #lines >= 2 then
+        -- ligne 1 : pythonw.exe du venv, ligne 2 : presence.py
+        for _, path in ipairs(lines) do
+            if not fileExists(path) then
+                log("Client introuvable : %s (projet déplacé ou client Python pas encore installé ? relance tools\\install_mod.ps1)", path)
+                return
+            end
+        end
+        cmd = 'start "" "' .. lines[1] .. '" "' .. lines[2] .. '"'
+    elseif #lines == 1 then
+        -- Ancien format (un seul chemin) : conservé pour les installations existantes.
+        if not fileExists(lines[1]) then
+            log("Client introuvable : %s (relance tools\\install_mod.ps1)", lines[1])
+            return
+        end
+        if lines[1]:lower():find("%.vbs$") then
+            cmd = 'wscript.exe "' .. lines[1] .. '"'
+        else
+            cmd = 'start "" "' .. lines[1] .. '"'
+        end
+    else
+        log("client_path.txt est vide : relance tools\\install_mod.ps1.")
         return
     end
-    local cmd = 'wscript.exe "' .. path .. '"'
+
     local ok, how, code = os.execute(cmd)
     log("Client Discord lancé (%s) → %s %s %s", cmd, tostring(ok), tostring(how), tostring(code))
 end

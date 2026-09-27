@@ -99,9 +99,9 @@ python -m venv .venv
 start.bat            rem console mode, logs visible
 ```
 
-**Automatic lifecycle**: the mod launches the client when the game starts (`start_hidden.vbs` through `os.execute`, a console window flashes for ~100 ms) and the client exits by itself when the game closes (`exit_with_game` in `config.json`). Only one instance runs at a time (Windows mutex). Nothing runs while the game is not running. The launcher path is written by `tools\install_mod.ps1` into `Mods\BetterPresence\client_path.txt`: re-run that script if you move the project.
+**Automatic lifecycle**: the mod launches the client when the game starts (`pythonw.exe` through `os.execute`, a console window flashes for ~100 ms) and the client exits by itself when the game closes (`exit_with_game` in `config.json`). Only one instance runs at a time (Windows mutex). Nothing runs while the game is not running. The launcher command is written by `tools\install_mod.ps1` into `Mods\BetterPresence\client_path.txt` (interpreter, then script): re-run that script if you move the project.
 
-- `start_hidden.vbs`: manual background start, no window (handy to test without the mod).
+- `start_background.bat`: manual background start, no window (handy to test without the mod).
 - `stop.bat`: stops a client running in the background.
 - `python presence.py --once`: prints the state read and the computed presence (debugging).
 - `python presence.py --stay`: do not exit when the game closes.

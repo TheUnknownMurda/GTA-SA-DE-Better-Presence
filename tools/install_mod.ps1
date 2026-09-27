@@ -34,13 +34,18 @@ if (-not (Test-Path $src)) {
 New-Item -ItemType Directory -Force -Path $dst | Out-Null
 Copy-Item -Path (Join-Path $src "*") -Destination $dst -Recurse -Force
 
-# Chemin du lanceur du client Discord : le mod le lit au démarrage du jeu et
-# lance le client (KismetSystemLibrary.LaunchURL -> wscript, sans console).
-$launcher = Join-Path $root "client\start_hidden.vbs"
-if (Test-Path $launcher) {
-    [IO.File]::WriteAllText((Join-Path $dst "client_path.txt"), $launcher, [Text.UTF8Encoding]::new($false))
+# Commande de lancement du client Discord, lue par le mod au démarrage du jeu :
+# ligne 1 = interpréteur (pythonw.exe n'ouvre pas de console), ligne 2 = script.
+$pythonw = Join-Path $root "client\.venv\Scripts\pythonw.exe"
+$script  = Join-Path $root "client\presence.py"
+if (Test-Path $script) {
+    [IO.File]::WriteAllText((Join-Path $dst "client_path.txt"), "$pythonw`r`n$script",
+        [Text.UTF8Encoding]::new($false))
+    if (-not (Test-Path $pythonw)) {
+        Write-Warning "client\.venv absent : lance Install.bat (etape [C]) pour preparer le client Python."
+    }
 } else {
-    Write-Warning "client\start_hidden.vbs introuvable : le client ne sera pas lancé automatiquement."
+    Write-Warning "client\presence.py introuvable : le client ne sera pas lance automatiquement."
 }
 
 Write-Host "Mod installé dans $dst"

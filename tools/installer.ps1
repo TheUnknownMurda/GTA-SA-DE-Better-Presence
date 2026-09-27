@@ -161,11 +161,14 @@ function Get-State {
         $s.Signatures = Test-Path (Join-Path $s.Win64 "UE4SS_Signatures\StaticConstructObject.lua")
         $s.Configured = $s.Ue4ss -and (Test-Ue4ssConfigured $s.Win64)
         $s.ModVersion = Get-ModVersion $s.Win64
+        # client_path.txt : ligne 1 = pythonw.exe du venv, ligne 2 = presence.py.
         $cp = Join-Path $s.Win64 "Mods\BetterPresence\client_path.txt"
         $s.ClientPathOk = $false
         if (Test-Path $cp) {
-            $p = (Get-Content $cp -TotalCount 1).Trim()
-            $s.ClientPathOk = ($p -eq (Join-Path $root "client\start_hidden.vbs"))
+            $lines = @(Get-Content $cp | ForEach-Object { $_.Trim() } | Where-Object { $_ })
+            $s.ClientPathOk = ($lines.Count -ge 2) -and
+                              ($lines[0] -eq (Join-Path $root "client\.venv\Scripts\pythonw.exe")) -and
+                              ($lines[1] -eq (Join-Path $root "client\presence.py"))
         }
     }
     $s.VcRedist = Test-VcRedist
